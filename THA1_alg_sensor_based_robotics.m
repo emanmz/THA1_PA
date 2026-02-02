@@ -5,8 +5,7 @@ clear all; close all; clc;
 function [angle, axis] = rot2axis(R)
 % check if so3
 if isSO3(R) == 0
-    disp("Not a valid rotation matrix");
-    return
+    error("Not a valid SO3 matrix");
 end
 
 % calc angle 
@@ -32,8 +31,7 @@ end
 function [q0, q1, q2, q3] = rot2quat(R)
 % check if so3
 if isSO3(R) == 0
-    disp("Not a valid rotation matrix");
-    return
+    error("Not a valid SO3 matrix");
 end
 % calculate quat
 q0 = 1/2 * sqrt(R(1,1)+R(2,2)+R(3,3)+1);
@@ -44,8 +42,48 @@ end
 
 %% rotation matrix -> ZYZ
 
+function [phi, theta, psi] = rot2zyz(R)
+if isSO3(R) == 0
+    error("Not a valid SO3 matrix");
+end 
+theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
+
+if theta == pi | theta == 0
+    phi = 0;
+    if R(3,3) > 0
+        theta = 0;
+        psi = atan2(-R(1,2), R(1,1));
+    else 
+        theta = pi;
+        psi = atan2(R(1,2), -R(1,1));
+    end 
+else 
+    phi = atan2(R(2,3),R(1,3));
+    psi = atan2(R(3,2),-R(3,1));
+end 
+end  
 
 
+%% rotation matrix -> roll pitch yaw
+
+function [roll, pitch, yaw] = rot2zyx(R)
+if isSO3(R) == 0
+    error("Not a valid SO3 matrix");
+end 
+pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
+
+if pitch == pi/2 | pitch == -pi/2
+    yaw = 0;
+    if pitch > 0
+        roll = atan2(R(1,2), R(2,2));
+    else 
+        roll = -atan2(R(1,2), R(2,2));
+    end 
+else 
+    roll = atan2(R(3,2), R(3,3));
+    yaw = atan2(R(2,1), R(1,1));
+end 
+end 
 %% Rotation matrix check
 
 function SO3 = isSO3(R)
@@ -65,28 +103,17 @@ end
 %% Main / Testing functions
 
 R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
-[angle, axis] = rot2axis(R);
-[q0, q1, q2, q3] = rot2quat(R);
-
-% Displaying rotation 
-disp("Rotational Matrix");
-disp(R)
-
-% Dispaly axis angle 
-disp("Axis");
-disp(axis);
-disp("Angle");
-disp(angle);
-
-% Display Quat
-disp("Quat");
-disp(q0);
-disp(q1);
-disp(q2);
-disp(q3);
-
-
 if isSO3(R)
-    disp("so3 check is true");
-end 
+    [angle, axis_vec] = rot2axis(R);
+    [q0, q1, q2, q3] = rot2quat(R);
+    [phi, theta, psi] = rot2zyz(R);
+    [roll, pitch, yaw] = rot2zyx(R);
+
+    disp("Rotational Matrix:"); disp(R);
+    fprintf("Angle: %.4f rad\n", angle);
+    fprintf("Axis: [%.4f, %.4f, %.4f]\n", axis_vec);
+    fprintf("Quaternion: [%.4f, %.4f, %.4f, %.4f]\n", q0, q1, q2, q3);
+    fprintf("ZYZ: [%.4f, %.4f, %.4f]\n", phi, theta, psi);
+    fprintf("ZYX: [%.4f, %.4f, %.4f]\n", roll, pitch, yaw);
+end
 
