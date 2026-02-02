@@ -111,11 +111,44 @@ end
 
 function [R] = axisangle2rot(axis, angle)
 
+% unit vector check
+if norm(axis)>0
+    axis = axis / norm(axis);
+end 
+
+ux = axis(1);
+uy = axis(2);
+uz = axis(3);
+
+K = [0, -uz, uy; uz, 0, -ux; -uy, ux, 0];
+
+% rodriguez formula 
+R = eye(3) + sin(angle)*K + (1 - cos(angle))*K^2;
+
 end 
 
 %% quat -> rotation
 
 function [R] = quat2rot(q0, q1, q2, q3)
+% normalize 
+mag = sqrt(q0^2 + q1^2 + q2^2 + q3^2);
+q0 = q0/mag; q1 = q1/mag; q2 = q2/mag; q3 = q3/mag;
+
+r11 = 1 - 2*q2^2 - 2*q3^2;
+r12 = 2*q1*q2 - 2*q0*q3;
+r13 = 2*q1*q3 + 2*q0*q2;
+
+r21 = 2*q1*q2 + 2*q0*q3;
+r22 = 1 - 2*q1^2 - 2*q3^2;
+r23 = 2*q2*q3 - 2*q0*q1;
+
+r31 = 2*q1*q3 - 2*q0*q2;
+r32 = 2*q2*q3 + 2*q0*q1;
+r33 = 1 - 2*q1^2 - 2*q2^2;
+
+R = [r11, r12, r13;
+    r21, r22, r23;
+    r31, r32, r33];
 end
 
 
@@ -139,19 +172,31 @@ end
 
 R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
 
-[angle, axis_vec] = rot2axisangle(R);
+[angle, axis] = rot2axisangle(R);
 [R2] = axisangle2rot(axis, angle);
 [q0, q1, q2, q3] = rot2quat(R);
+[R3] = quat2rot(q0, q1, q2, q3);
 [phi, theta, psi] = rot2zyz(R);
 [roll, pitch, yaw] = rot2zyx(R);
 
 disp("Rotational Matrix:"); disp(R);
 fprintf("Angle: %.4f rad\n", angle);
-fprintf("Axis: [%.4f, %.4f, %.4f]\n", axis_vec);
+fprintf("Axis: [%.4f, %.4f, %.4f]\n", axis);
 fprintf("Quaternion: [%.4f, %.4f, %.4f, %.4f]\n", q0, q1, q2, q3);
 fprintf("ZYZ: [%.4f, %.4f, %.4f]\n", phi, theta, psi);
 fprintf("ZYX: [%.4f, %.4f, %.4f]\n", roll, pitch, yaw);
+
 disp("From Axis Angle")
 disp("Rotational Matrix:"); disp(R2);
+disp("From Quaternion")
+disp("Rotational Matrix:"); disp(R3);
+
+% Checking with built in matlab functions :P 
+
+disp("Rotation Matrix 2 Axis Angle"); disp(rotm2axang(R));
+disp("Rotation Matrix 2 Quat"); disp(rotm2quat(R));
+disp("Rotation Matrix 2 ZYZ"); disp(rotm2eul(R, 'ZYZ');
+disp("Rotation Matrix 2 ZYX"); rotm2eul(R, 'ZYX');
+
 
 

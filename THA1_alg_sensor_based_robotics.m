@@ -185,9 +185,18 @@ fprintf("Axis: [%.4f, %.4f, %.4f]\n", axis);
 fprintf("Quaternion: [%.4f, %.4f, %.4f, %.4f]\n", q0, q1, q2, q3);
 fprintf("ZYZ: [%.4f, %.4f, %.4f]\n", phi, theta, psi);
 fprintf("ZYX: [%.4f, %.4f, %.4f]\n", roll, pitch, yaw);
+
 disp("From Axis Angle")
 disp("Rotational Matrix:"); disp(R2);
 disp("From Quaternion")
 disp("Rotational Matrix:"); disp(R3);
+
+% Checking with built in matlab functions :P 
+
+disp("Rotation Matrix 2 Axis Angle"); disp(rotm2axang(R));
+disp("Rotation Matrix 2 Quat"); disp(rotm2quat(R));
+disp("Rotation Matrix 2 ZYZ"); disp(rotm2eul(R, 'ZYZ'));
+disp("Rotation Matrix 2 ZYX"); disp(rotm2eul(R, 'XYZ'));
+
 
 
