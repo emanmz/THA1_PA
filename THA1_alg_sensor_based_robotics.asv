@@ -18,17 +18,16 @@ R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
 
 function SO3 = so3Check(R)
 
-% 3 by 3 matrix
-is3by3 = all(size(R) == [3 3]);
+    if isSO3
 
-% orthogonal: R'R = I
-isOrthog = norm(R' * R - eye(3)) < 1e-6;
+        % orthogonal: R'R = I
+        isOrthog = norm(R' * R - eye(3)) < 1e-6;
         
-%  determinant: det(R) = 1
-isDetOne = abs(det(R) - 1) < 1e-6;
-
-SO3 = is3by3 && isOrthog && isDetOne;
-disp(SO3)
+        %  determinant: det(R) = 1
+        isDetOne = abs(det(R) - 1) < 1e-6;
+        
+        isSO3 = isOrthog && isDetOne;
+    end
 end
 
 
