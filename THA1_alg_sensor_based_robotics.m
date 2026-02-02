@@ -12,18 +12,18 @@ end
 cosTheta = (trace(R) - 1) / 2;
 angle = acos(cosTheta);
 % singularity conditions and then axis calc
-if angle == 0
-    axis = NaN;
-elseif angle == pi
-    n = 1 / (sqrt(2*(1+R(3,3))));
-    n2 = [R(1,3),R(2,3),1+R(3,3)];
-    axis = n2 / n;
+if angle < 1e-6
+    axis = [0; 0; 0];
+elseif abs(angle - pi) < 1e-6
+    axis = [sqrt((R(1,1)+1)/2); sqrt((R(2,2)+1)/2); sqrt((R(3,3)+1)/2)];
+    % Correcting signs for the pi case
+    if R(1,2) < 0, axis(2) = -axis(2); end
+    if R(1,3) < 0, axis(3) = -axis(3); end
 else 
-    n = (1/2 * sin(angle));
+    n = (2 * sin(angle));
     n2 = [R(3,2)-R(2,3), R(1,3) - R(3,1),R(2,1) - R(1,2)];
     axis = n2 / n;
-end 
-
+end
 end
 
 %% rotational matrix -> Quaternion
@@ -34,11 +34,34 @@ if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end
 % calculate quat
-q0 = 1/2 * sqrt(R(1,1)+R(2,2)+R(3,3)+1);
-q1 = 1/2 * sign((R(3,2)-R(2,3))*sqrt(R(1,1)-R(2,2)-R(3,3)+1));
-q2 = 1/2 * sign((R(1,3)-R(3,1))*sqrt(R(2,2)-R(3,3)-R(1,1)+1));
-q3 = 1/2 * sign((R(2,1)-R(1,2))*sqrt(R(3,3)-R(1,1)-R(2,2)+1));
-end 
+tr = trace(R);
+if (tr>0)
+    S = sqrt(tr + 1) * 2;
+    q0 = 0.25 * S;
+    q1 = (R(3,2)-R(2,3)) /S;
+    q2 = (R(1,3)-R(3,1)) /S;
+    q3 = (R(2,1)-R(1,2)) /S;
+elseif (R(1,1) > R(2,2)) && (R(1,1) > R(3,3))
+    S = sqrt(1.0 + R(1,1) - R(2,2) - R(3,3)) * 2;
+    q0 = (R(3,2) - R(2,3)) / S;
+    q1 = 0.25 * S;
+    q2 = (R(1,2) + R(2,1)) / S;
+    q3 = (R(1,3) + R(3,1)) / S;
+elseif (R(2,2) > R(3,3))
+    S = sqrt(1.0 + R(2,2) - R(1,1) - R(3,3)) * 2;
+    q0 = (R(1,3) - R(3,1)) / S;
+    q1 = (R(1,2) + R(2,1)) / S;
+    q2 = 0.25 * S;
+    q3 = (R(2,3) + R(3,2)) / S;
+else
+    S = sqrt(1.0 + R(3,3) - R(1,1) - R(2,2)) * 2;
+    q0 = (R(2,1) - R(1,2)) / S;
+    q1 = (R(1,3) + R(3,1)) / S;
+    q2 = (R(2,3) + R(3,2)) / S;
+    q3 = 0.25 * S;
+end
+end
+ 
 
 %% rotation matrix -> ZYZ
 
@@ -48,7 +71,7 @@ if isSO3(R) == 0
 end 
 theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
 
-if theta == pi | theta == 0
+if abs(theta) < 1e-6 || abs(theta - pi) < 1e-6
     phi = 0;
     if R(3,3) > 0
         theta = 0;
@@ -72,7 +95,7 @@ if isSO3(R) == 0
 end 
 pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
 
-if pitch == pi/2 | pitch == -pi/2
+if abs(pitch - pi/2) < 1e-6 || abs(pitch + pi/2) < 1e-6
     yaw = 0;
     if pitch > 0
         roll = atan2(R(1,2), R(2,2));
