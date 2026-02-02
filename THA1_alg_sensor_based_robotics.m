@@ -13,8 +13,7 @@ function [angle, axis] = rotation2axis(R)
         
 end
 
-R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
-[angle, axis] = rotation2axis(R);
+%% Rotation matrix check
 
 function SO3 = so3Check(R)
 
@@ -31,6 +30,10 @@ SO3 = is3by3 && isOrthog && isDetOne;
 disp(SO3)
 end
 
+%% Main / Testing functions
+
+R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
+[angle, axis] = rotation2axis(R);
 
 if so3Check(R)
     disp("so3 check is true");
