@@ -1,10 +1,15 @@
 %% THA 1 - PA 
 clear all; close all; clc;
 
-%% Given a rotational matrix SO3 -> equivalent axis angle representation
+%% rotational matrix SO3 -> equivalent axis angle representation
 function [angle, axis] = rotation2axis(R)
     % calculate rotation anglle
     % trace(R) = R(1,1) + R(2,2) + R(3,3)
+    if isSO3(R) == 0
+        disp("Not a valid rotation matrix");
+        return
+    end
+
     cosTheta = (trace(R) - 1) / 2;
     angle = acos(cosTheta);
     n = (1/2 * sin(angle));
@@ -13,28 +18,35 @@ function [angle, axis] = rotation2axis(R)
         
 end
 
+%% rotational matrix -> Quaternion 
+
 %% Rotation matrix check
 
-function SO3 = so3Check(R)
+function SO3 = isSO3(R)
 
-% 3 by 3 matrix
-is3by3 = all(size(R) == [3 3]);
+    % 3 by 3 matrix
+    is3by3 = all(size(R) == [3 3]);
 
-% orthogonal: R'R = I
-isOrthog = norm(R' * R - eye(3)) < 1e-6;
+    % orthogonal: R'R = I
+    isOrthog = norm(R' * R - eye(3)) < 1e-6;
         
-%  determinant: det(R) = 1
-isDetOne = abs(det(R) - 1) < 1e-6;
+    %  determinant: det(R) = 1
+    isDetOne = abs(det(R) - 1) < 1e-6;
 
-SO3 = is3by3 && isOrthog && isDetOne;
-disp(SO3)
+    SO3 = is3by3 && isOrthog && isDetOne;
 end
 
 %% Main / Testing functions
 
 R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
+disp("Rotational Matrix");
+disp(R)
 [angle, axis] = rotation2axis(R);
+disp("Axis");
+disp(axis);
+disp("Angle");
+disp(angle);
 
-if so3Check(R)
+if isSO3(R)
     disp("so3 check is true");
 end 
