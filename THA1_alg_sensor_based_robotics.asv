@@ -2,7 +2,7 @@
 clear all; close all; clc;
 
 %% rotational matrix SO3 -> equivalent axis angle representation
-function [angle, axis] = rot2axis(R)
+function [angle, axis] = rot2axisangle(R)
 % check if so3
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
@@ -12,18 +12,18 @@ end
 cosTheta = (trace(R) - 1) / 2;
 angle = acos(cosTheta);
 % singularity conditions and then axis calc
-if angle == 0
-    axis = NaN;
-elseif angle == pi
-    n = 1 / (sqrt(2*(1+R(3,3))));
-    n2 = [R(1,3),R(2,3),1+R(3,3)];
-    axis = n2 / n;
+if angle < 1e-6
+    axis = [0; 0; 0];
+elseif abs(angle - pi) < 1e-6
+    axis = [sqrt((R(1,1)+1)/2); sqrt((R(2,2)+1)/2); sqrt((R(3,3)+1)/2)];
+    % Correcting signs for the pi case
+    if R(1,2) < 0, axis(2) = -axis(2); end
+    if R(1,3) < 0, axis(3) = -axis(3); end
 else 
-    n = (1/2 * sin(angle));
+    n = (2 * sin(angle));
     n2 = [R(3,2)-R(2,3), R(1,3) - R(3,1),R(2,1) - R(1,2)];
     axis = n2 / n;
-end 
-
+end
 end
 
 %% rotational matrix -> Quaternion
@@ -34,11 +34,34 @@ if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end
 % calculate quat
-q0 = 1/2 * sqrt(R(1,1)+R(2,2)+R(3,3)+1);
-q1 = 1/2 * sign((R(3,2)-R(2,3))*sqrt(R(1,1)-R(2,2)-R(3,3)+1));
-q2 = 1/2 * sign((R(1,3)-R(3,1))*sqrt(R(2,2)-R(3,3)-R(1,1)+1));
-q3 = 1/2 * sign((R(2,1)-R(1,2))*sqrt(R(3,3)-R(1,1)-R(2,2)+1));
-end 
+tr = trace(R);
+if (tr>0)
+    S = sqrt(tr + 1) * 2;
+    q0 = 0.25 * S;
+    q1 = (R(3,2)-R(2,3)) /S;
+    q2 = (R(1,3)-R(3,1)) /S;
+    q3 = (R(2,1)-R(1,2)) /S;
+elseif (R(1,1) > R(2,2)) && (R(1,1) > R(3,3))
+    S = sqrt(1.0 + R(1,1) - R(2,2) - R(3,3)) * 2;
+    q0 = (R(3,2) - R(2,3)) / S;
+    q1 = 0.25 * S;
+    q2 = (R(1,2) + R(2,1)) / S;
+    q3 = (R(1,3) + R(3,1)) / S;
+elseif (R(2,2) > R(3,3))
+    S = sqrt(1.0 + R(2,2) - R(1,1) - R(3,3)) * 2;
+    q0 = (R(1,3) - R(3,1)) / S;
+    q1 = (R(1,2) + R(2,1)) / S;
+    q2 = 0.25 * S;
+    q3 = (R(2,3) + R(3,2)) / S;
+else
+    S = sqrt(1.0 + R(3,3) - R(1,1) - R(2,2)) * 2;
+    q0 = (R(2,1) - R(1,2)) / S;
+    q1 = (R(1,3) + R(3,1)) / S;
+    q2 = (R(2,3) + R(3,2)) / S;
+    q3 = 0.25 * S;
+end
+end
+ 
 
 %% rotation matrix -> ZYZ
 
@@ -48,7 +71,7 @@ if isSO3(R) == 0
 end 
 theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
 
-if theta == pi | theta == 0
+if abs(theta) < 1e-6 || abs(theta - pi) < 1e-6
     phi = 0;
     if R(3,3) > 0
         theta = 0;
@@ -58,16 +81,44 @@ if theta == pi | theta == 0
         psi = atan2(R(1,2), -R(1,1));
     end 
 else 
-    phi = atan2(R(2,3),R)
+    phi = atan2(R(2,3),R(1,3));
+    psi = atan2(R(3,2),-R(3,1));
 end 
-
-end 
+end  
 
 
 %% rotation matrix -> roll pitch yaw
 
-function rot2zyx
+function [roll, pitch, yaw] = rot2zyx(R)
+if isSO3(R) == 0
+    error("Not a valid SO3 matrix");
 end 
+pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
+
+if abs(pitch - pi/2) < 1e-6 || abs(pitch + pi/2) < 1e-6
+    yaw = 0;
+    if pitch > 0
+        roll = atan2(R(1,2), R(2,2));
+    else 
+        roll = -atan2(R(1,2), R(2,2));
+    end 
+else 
+    roll = atan2(R(3,2), R(3,3));
+    yaw = atan2(R(2,1), R(1,1));
+end 
+end 
+%% axis angle -> rotation
+
+function [R] = axisangle2rot(axis, angle)
+
+end 
+
+%% quat -> rotation
+
+function [R] = quat2rot(q0, q1, q2, q3)
+end
+
+
 %% Rotation matrix check
 
 function SO3 = isSO3(R)
@@ -87,28 +138,20 @@ end
 %% Main / Testing functions
 
 R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
-[angle, axis] = rot2axis(R);
+
+[angle, axis_vec] = rot2axisangle(R);
+[R2] = axisangle2rot(axis, angle);
 [q0, q1, q2, q3] = rot2quat(R);
+[phi, theta, psi] = rot2zyz(R);
+[roll, pitch, yaw] = rot2zyx(R);
 
-% Displaying rotation 
-disp("Rotational Matrix");
-disp(R)
+disp("Rotational Matrix:"); disp(R);
+fprintf("Angle: %.4f rad\n", angle);
+fprintf("Axis: [%.4f, %.4f, %.4f]\n", axis_vec);
+fprintf("Quaternion: [%.4f, %.4f, %.4f, %.4f]\n", q0, q1, q2, q3);
+fprintf("ZYZ: [%.4f, %.4f, %.4f]\n", phi, theta, psi);
+fprintf("ZYX: [%.4f, %.4f, %.4f]\n", roll, pitch, yaw);
+disp("From Axis Angle")
+disp("Rotational Matrix:"); disp(R2);
 
-% Dispaly axis angle 
-disp("Axis");
-disp(axis);
-disp("Angle");
-disp(angle);
-
-% Display Quat
-disp("Quat");
-disp(q0);
-disp(q1);
-disp(q2);
-disp(q3);
-
-
-if isSO3(R)
-    disp("so3 check is true");
-end 
 
