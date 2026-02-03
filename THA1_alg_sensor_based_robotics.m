@@ -1,5 +1,6 @@
 %% THA 1 - PA 
 clear all; close all; clc;
+% need comments !!! and equations !! add question numbers 
 
 %% rotational matrix SO3 -> equivalent axis angle representation
 function [angle, axis] = rot2axisangle(R)
@@ -13,15 +14,16 @@ cosTheta = (trace(R) - 1) / 2;
 angle = acos(cosTheta);
 % singularity conditions and then axis calc
 if angle < 1e-6
-    axis = [0; 0; 0];
+    error("Axis is undefined");
 elseif abs(angle - pi) < 1e-6
-    axis = [sqrt((R(1,1)+1)/2); sqrt((R(2,2)+1)/2); sqrt((R(3,3)+1)/2)];
-    % Correcting signs for the pi case
-    if R(1,2) < 0, axis(2) = -axis(2); end
-    if R(1,3) < 0, axis(3) = -axis(3); end
+    sqrtpart = 1/(sqrt(2*(1+R(1,1))));
+    axis = [(sqrtpart*(R(1,1)+1)); (sqrtpart*(R(2,1))); (sqrtpart*(R(3,1)))];
+    % Correcting signs for the pi case CHECK THIS 
+    % if R(1,2) < 0, axis(2) = -axis(2); end
+    % if R(1,3) < 0, axis(3) = -axis(3); end
 else 
     n = (2 * sin(angle));
-    n2 = [R(3,2)-R(2,3), R(1,3) - R(3,1),R(2,1) - R(1,2)];
+    n2 = [R(3,2)-R(2,3), R(1,3) - R(3,1),R(2,1) - R(1,2)]; % do this the easier way maybe?
     axis = n2 / n;
 end
 end
@@ -36,29 +38,13 @@ end
 % calculate quat
 tr = trace(R);
 if (tr>0)
-    S = sqrt(tr + 1) * 2;
-    q0 = 0.25 * S;
+    S = sqrt(tr + 1) * 2; % bro look at this here check sign function again
+    % check all the if else statements
+    % please write comments here 
+    q0 = 0.25 * S; 
     q1 = (R(3,2)-R(2,3)) /S;
     q2 = (R(1,3)-R(3,1)) /S;
     q3 = (R(2,1)-R(1,2)) /S;
-elseif (R(1,1) > R(2,2)) && (R(1,1) > R(3,3))
-    S = sqrt(1.0 + R(1,1) - R(2,2) - R(3,3)) * 2;
-    q0 = (R(3,2) - R(2,3)) / S;
-    q1 = 0.25 * S;
-    q2 = (R(1,2) + R(2,1)) / S;
-    q3 = (R(1,3) + R(3,1)) / S;
-elseif (R(2,2) > R(3,3))
-    S = sqrt(1.0 + R(2,2) - R(1,1) - R(3,3)) * 2;
-    q0 = (R(1,3) - R(3,1)) / S;
-    q1 = (R(1,2) + R(2,1)) / S;
-    q2 = 0.25 * S;
-    q3 = (R(2,3) + R(3,2)) / S;
-else
-    S = sqrt(1.0 + R(3,3) - R(1,1) - R(2,2)) * 2;
-    q0 = (R(2,1) - R(1,2)) / S;
-    q1 = (R(1,3) + R(3,1)) / S;
-    q2 = (R(2,3) + R(3,2)) / S;
-    q3 = 0.25 * S;
 end
 end
  
@@ -69,12 +55,13 @@ function [phi, theta, psi] = rot2zyz(R)
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end 
+% add singularity
 theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
-
+% need to add inbetween -pi and 0 whoops; fix statements
 if abs(theta) < 1e-6 || abs(theta - pi) < 1e-6
     phi = 0;
     if R(3,3) > 0
-        theta = 0;
+        theta = 0; % infinity solutions throw error for pi, -pi and 0 
         psi = atan2(-R(1,2), R(1,1));
     else 
         theta = pi;
@@ -93,6 +80,7 @@ function [roll, pitch, yaw] = rot2zyx(R)
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end 
+% add singularity and change to x y z
 pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
 
 if abs(pitch - pi/2) < 1e-6 || abs(pitch + pi/2) < 1e-6
@@ -117,20 +105,25 @@ if norm(axis)>0
 end 
 
 ux = axis(1);
+disp(ux);
 uy = axis(2);
+disp(uy);
 uz = axis(3);
+disp(uz);
 
 K = [0, -uz, uy; uz, 0, -ux; -uy, ux, 0];
+disp("K")
+disp(K);
 
 % rodriguez formula 
-R = eye(3) + sin(angle)*K + (1 - cos(angle))*K^2;
+R = eye(3) + sin(angle)*K + (1 - cos(angle))*K^2; % I + wsintheta + w2 (1-costheta)
 
 end 
 
 %% quat -> rotation
-
 function [R] = quat2rot(q0, q1, q2, q3)
-% normalize 
+% ALL THE SIGNS R WRONGGGGGG 
+% normalized here dk why 
 mag = sqrt(q0^2 + q1^2 + q2^2 + q3^2);
 q0 = q0/mag; q1 = q1/mag; q2 = q2/mag; q3 = q3/mag;
 
