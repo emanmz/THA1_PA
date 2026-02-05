@@ -76,7 +76,7 @@ if abs(sin(theta)) < 1e-6
     phi = 0;
     if R(3,3) > 0 % theta = 0
         theta = 0;
-        psi = atan(-R(1,2), R(1,1));
+        psi = atan2(-R(1,2), R(1,1));
     else % theta == pi
         theta = pi;
         psi = atan2(R(2,1), R(2,2));
@@ -91,22 +91,20 @@ end
 
 %% 1c. rotation matrix -> roll pitch yaw
 
-function [roll, pitch, yaw] = rot2zyx(R)
+function [roll, pitch, yaw] = rot2xyz(R)
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end 
-% add singularity and change to x y z
+
+% pitch = atan2(-r31, sqrt(r32^2 + r33^2))
 pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
 
-if abs(pitch - pi/2) < 1e-6 || abs(pitch + pi/2) < 1e-6
-    yaw = 0;
-    if pitch > 0
-        roll = atan2(R(1,2), R(2,2));
-    else 
-        roll = -atan2(R(1,2), R(2,2));
-    end 
+if abs(cos(pitch)) < 1e-6 % When pitch is 90 or -90 deg singularity!
+    error("Singularity!");
 else 
+    % roll = atan2(r32, r33)
     roll = atan2(R(3,2), R(3,3));
+    % yaw = atan2(r21, r11)
     yaw = atan2(R(2,1), R(1,1));
 end 
 end 
@@ -116,7 +114,8 @@ function [R] = axisangle2rot(axis, angle)
 
 % normalize axis so it's a unit vector
 % || w || = 1
-if norm(axis)>0
+
+if norm(axis)> 0
     axis = axis / norm(axis);
 end 
 
@@ -136,23 +135,30 @@ end
 
 %% 2b. quat -> rotation
 function [R] = quat2rot(q0, q1, q2, q3)
-% ALL THE SIGNS R WRONGGGGGG 
-% normalized here dk why 
+
+% a unit quaternion
 mag = sqrt(q0^2 + q1^2 + q2^2 + q3^2);
 q0 = q0/mag; q1 = q1/mag; q2 = q2/mag; q3 = q3/mag;
 
-r11 = 1 - 2*q2^2 - 2*q3^2;
-r12 = 2*q1*q2 - 2*q0*q3;
-r13 = 2*q1*q3 + 2*q0*q2;
+% 2. Calculate matrix elements based on source formulas:
+% Diagonal elements
+r11 = q0^2 + q1^2 - q2^2 - q3^2; %
+r22 = q0^2 - q1^2 + q2^2 - q3^2; %
+r33 = q0^2 - q1^2 - q2^2 + q3^2; %
 
-r21 = 2*q1*q2 + 2*q0*q3;
-r22 = 1 - 2*q1^2 - 2*q3^2;
-r23 = 2*q2*q3 - 2*q0*q1;
+% Off-diagonal elements (Row 1)
+r12 = 2*(q1*q2 - q0*q3); %
+r13 = 2*(q0*q2 + q1*q3); %
 
-r31 = 2*q1*q3 - 2*q0*q2;
-r32 = 2*q2*q3 + 2*q0*q1;
-r33 = 1 - 2*q1^2 - 2*q2^2;
+% Off-diagonal elements (Row 2)
+r21 = 2*(q0*q3 + q1*q2); %
+r23 = 2*(q2*q3 - q0*q1); %
 
+% Off-diagonal elements (Row 3)
+r31 = 2*(q1*q3 - q0*q2); %
+r32 = 2*(q0*q1 + q2*q3); %
+
+% 3. Assemble the SO(3) Rotation Matrix
 R = [r11, r12, r13;
     r21, r22, r23;
     r31, r32, r33];
@@ -200,7 +206,7 @@ R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
 [q0, q1, q2, q3] = rot2quat(R);
 [R3] = quat2rot(q0, q1, q2, q3);
 [phi, theta, psi] = rot2zyz(R);
-[roll, pitch, yaw] = rot2zyx(R);
+[roll, pitch, yaw] = rot2xyz(R);
 
 disp("Rotational Matrix:"); disp(R);
 fprintf("Angle: %.4f rad\n", angle);
