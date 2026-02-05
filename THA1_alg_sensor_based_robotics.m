@@ -2,7 +2,7 @@
 clear all; close all; clc;
 % need comments !!! and equations !! add question numbers 
 
-%% 1. rotational matrix SO3 -> equivalent axis angle representation
+%% 1a. rotational matrix SO3 -> equivalent axis angle representation
 
 function [angle, axis] = rot2axisangle(R)
 % check if so3
@@ -41,7 +41,7 @@ else % CASE C: General Case
 end
 end
 
-%% rotational matrix -> Quaternion
+%% 1b. rotational matrix -> Quaternion
 
 function [q0, q1, q2, q3] = rot2quat(R)
 % check if so3
@@ -62,7 +62,7 @@ end
 end
  
 
-%% rotation matrix -> ZYZ
+%% 1c. rotation matrix -> ZYZ
 
 function [phi, theta, psi] = rot2zyz(R)
 if isSO3(R) == 0
@@ -87,7 +87,7 @@ end
 end  
 
 
-%% rotation matrix -> roll pitch yaw
+%% 1c. rotation matrix -> roll pitch yaw
 
 function [roll, pitch, yaw] = rot2zyx(R)
 if isSO3(R) == 0
@@ -108,32 +108,31 @@ else
     yaw = atan2(R(2,1), R(1,1));
 end 
 end 
-%% axis angle -> rotation
+%% 2a. axis angle -> rotation
 
 function [R] = axisangle2rot(axis, angle)
 
-% unit vector check
+% normalize axis so it's a unit vector
+% || w || = 1
 if norm(axis)>0
     axis = axis / norm(axis);
 end 
 
 ux = axis(1);
-disp(ux);
 uy = axis(2);
-disp(uy);
 uz = axis(3);
-disp(uz);
 
+% skew symmetric matrix  
 K = [0, -uz, uy; uz, 0, -ux; -uy, ux, 0];
-disp("K")
-disp(K);
 
 % rodriguez formula 
-R = eye(3) + sin(angle)*K + (1 - cos(angle))*K^2; % I + wsintheta + w2 (1-costheta)
+% R=I+(sintheta )K+(1costheta )K^2)
+% w^2 = w w' - I (avoid matrix multiplication)
+R = sin(angle) * eye(3) + (1 - cos(angle)* (axis * axis')) + sin(angle) * K;
 
 end 
 
-%% quat -> rotation
+%% 2b. quat -> rotation
 function [R] = quat2rot(q0, q1, q2, q3)
 % ALL THE SIGNS R WRONGGGGGG 
 % normalized here dk why 
