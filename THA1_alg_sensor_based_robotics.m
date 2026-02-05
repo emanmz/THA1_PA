@@ -48,17 +48,14 @@ function [q0, q1, q2, q3] = rot2quat(R)
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end
-% calculate quat
-tr = trace(R);
-if (tr>0)
-    S = sqrt(tr + 1) * 2; % bro look at this here check sign function again
-    % check all the if else statements
-    % please write comments here 
-    q0 = 0.25 * S; 
-    q1 = (R(3,2)-R(2,3)) /S;
-    q2 = (R(1,3)-R(3,1)) /S;
-    q3 = (R(2,1)-R(1,2)) /S;
-end
+% q0 = 1/2 sqrt( r11 + r22 + r33 + 1)
+% q1 = 1/2 sgn(r32 - r23) sqrt( r11 - r22 - r33 + 1)
+% q2 = 1/2 sgn(r13 - r31) sqrt( r22 - r33 - r11 + 1)
+% q3 = 1/2 sgn(r21 - r12) sqrt( r33 - r11 - r22 + 1)
+q0 = 0.5 * sqrt(R(1,1) + R(2,2) + R(3,3) + 1);
+q1 = 0.5 * sgn(R(3,2) - R(2,3)) * sqrt(R(1,1) - R(2,2) - R(3,3) + 1);
+q2 = 0.5 * sgn(R(1,3) - R(3,1)) * sqrt(R(2,2) - R(3,3) - R(1,1) + 1);
+q3 = 0.5 * sgn(R(2,1) - R(1,2)) * sqrt(R(3,3) - R(1,1) - R(2,2) + 1);
 end
  
 
@@ -163,15 +160,31 @@ function SO3 = isSO3(R)
 
 % 3 by 3 matrix
 is3by3 = all(size(R) == [3 3]);
+if ~is3by3
+    SO3 = false;
+    disp("NOT a Square 3 x 3 Rotational Matrix");
+    return;
+end 
 
 % orthogonal: R'R = I
 isOrthog = norm(R' * R - eye(3)) < 1e-6;
 
 %  determinant: det(R) = 1
+% If det(R) = -1, its an improper rotation (a reflection)
 isDetOne = abs(det(R) - 1) < 1e-6;
 
 SO3 = is3by3 && isOrthog && isDetOne;
 end
+
+%% sgn function 
+
+function s = sgn(x)
+if x >= 0 
+    s = 1; 
+else 
+    s = -1;
+end 
+end 
 
 %% Main / Testing functions
 
