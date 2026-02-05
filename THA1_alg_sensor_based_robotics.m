@@ -1,6 +1,5 @@
 %% THA 1 - PA 
 clear all; close all; clc;
-% need comments !!! and equations !! add question numbers 
 
 %% 1a. rotational matrix SO3 -> equivalent axis angle representation
 
@@ -10,10 +9,8 @@ if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end
 
-if R - eye(3) < 1e-6 % CASE A: if R = I -> theta = 0
-    angle = 0;
-    disp("Axis is undefined");
-    axis = [0; 0; 0];
+if norm(R - eye(3), 'fro') < 1e-6 % CASE A: if R = I -> theta = 0
+    error("Axis is undefined! Singularity!");
 elseif trace(R)+1 < 1e-6 % CASE B: if tr(R) = -1 -> theta = pi
     angle = pi;
     % check what diagonal element is largest to avoid division by 0
@@ -70,17 +67,9 @@ end
 
 theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3)); % in the range of 0, pi
 
-% singularity sin(theta) = 0
+% singularity sin(theta) = 0 or pi
 if abs(sin(theta)) < 1e-6
-    disp("Singularity");
-    phi = 0;
-    if R(3,3) > 0 % theta = 0
-        theta = 0;
-        psi = atan2(-R(1,2), R(1,1));
-    else % theta == pi
-        theta = pi;
-        psi = atan2(R(2,1), R(2,2));
-    end
+    error("Singularity! Axes are parralel");
 else
     % general case
     phi = atan2(R(2,3), R(1,3));
@@ -129,7 +118,7 @@ K = [0, -uz, uy; uz, 0, -ux; -uy, ux, 0];
 % rodriguez formula 
 % R=I+(sintheta )K+(1costheta )K^2)
 % w^2 = w w' - I (avoid matrix multiplication)
-R = sin(angle) * eye(3) + (1 - cos(angle)* (axis * axis')) + sin(angle) * K;
+R = cos(angle) * eye(3) + (1 - cos(angle))* (axis * axis') + sin(angle) * K;
 
 end 
 
@@ -198,35 +187,88 @@ end
 end 
 
 %% Main / Testing functions
+clear all; close all; clc;
 
-R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
+% Define test cases
+test_names = {'90 deg X', '90 deg Y', '90 deg Z', '180 deg Z', 'Identity'};
+matrices = {
+    [1 0 0; 0 0 -1; 0 1 0], ... % 90 deg X
+    [0 0 1; 0 1 0; -1 0 0], ... % 90 deg Y
+    [0 -1 0; 1 0 0; 0 0 1], ... % 90 deg Z
+    [-1 0 0; 0 -1 0; 0 0 1], ...% 180 deg Z (Case B Singularity)
+    eye(3)                      % Identity (Case A Singularity)
+};
 
-[angle, axis] = rot2axisangle(R);
-[R2] = axisangle2rot(axis, angle);
-[q0, q1, q2, q3] = rot2quat(R);
-[R3] = quat2rot(q0, q1, q2, q3);
-[phi, theta, psi] = rot2zyz(R);
-[roll, pitch, yaw] = rot2xyz(R);
+for i = 1:length(matrices)
+    fprintf('--- Testing Case: %s ---\n', test_names{i});
+    R = matrices{i};
+    
+    % 1. Test Axis-Angle
+    try
+        [ang, ax] = rot2axisangle(R);
+        fprintf('Axis-Angle: Angle = %.4f, Axis = [%.2f, %.2f, %.2f]\n', ang, ax);
+        R_rec = axisangle2rot(ax, ang);
+        fprintf('Axis-Angle Recovery Error: %.4e\n', norm(R - R_rec));
+    catch ME
+        fprintf('Axis-Angle Status: %s\n', ME.message);
+    end
+    
+    % 2. Test Quaternions (Formula from)
+    try
+        [q0, q1, q2, q3] = rot2quat(R);
+        fprintf('Quaternion: [%.4f, %.4f, %.4f, %.4f]\n', q0, q1, q2, q3);
+        R_rec = quat2rot(q0, q1, q2, q3);
+        fprintf('Quaternion Recovery Error: %.4e\n', norm(R - R_rec));
+    catch ME
+        fprintf('Quaternion Status: %s\n', ME.message);
+    end
+    
+    % 3. Test ZYZ (Formula from)
+    try
+        [phi, theta, psi] = rot2zyz(R);
+        fprintf('ZYZ Euler: [%.4f, %.4f, %.4f]\n', phi, theta, psi);
+    catch ME
+        fprintf('ZYZ Status: %s\n', ME.message);
+    end
+    
+    % 4. Test XYZ (Roll-Pitch-Yaw)
+    try
+        [roll, pitch, yaw] = rot2xyz(R);
+        fprintf('ZYX Euler: [%.4f, %.4f, %.4f]\n', roll, pitch, yaw);
+    catch ME
+        fprintf('ZYX Status: %s\n', ME.message);
+    end
+    fprintf('\n');
+end
 
-disp("Rotational Matrix:"); disp(R);
-fprintf("Angle: %.4f rad\n", angle);
-fprintf("Axis: [%.4f, %.4f, %.4f]\n", axis);
-fprintf("Quaternion: [%.4f, %.4f, %.4f, %.4f]\n", q0, q1, q2, q3);
-fprintf("ZYZ: [%.4f, %.4f, %.4f]\n", phi, theta, psi);
-fprintf("ZYX: [%.4f, %.4f, %.4f]\n", roll, pitch, yaw);
-disp("/n");
-
-disp("From Axis Angle")
-disp("Rotational Matrix:"); disp(R2);
-disp("From Quaternion")
-disp("Rotational Matrix:"); disp(R3);
-
-% Checking with built in matlab functions :P 
-disp("Checks with builtin matlab functions");
-disp("Rotation Matrix 2 Axis Angle"); disp(rotm2axang(R));
-disp("Rotation Matrix 2 Quat"); disp(rotm2quat(R));
-disp("Rotation Matrix 2 ZYZ"); disp(rotm2eul(R, 'ZYZ'));
-disp("Rotation Matrix 2 ZYX"); disp(rotm2eul(R, 'XYZ'));
-
-
+% R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
+% 
+% [angle, axis] = rot2axisangle(R);
+% [R2] = axisangle2rot(axis, angle);
+% [q0, q1, q2, q3] = rot2quat(R);
+% [R3] = quat2rot(q0, q1, q2, q3);
+% [phi, theta, psi] = rot2zyz(R);
+% [roll, pitch, yaw] = rot2xyz(R);
+% 
+% disp("Rotational Matrix:"); disp(R);
+% fprintf("Angle: %.4f rad\n", angle);
+% fprintf("Axis: [%.4f, %.4f, %.4f]\n", axis);
+% fprintf("Quaternion: [%.4f, %.4f, %.4f, %.4f]\n", q0, q1, q2, q3);
+% fprintf("ZYZ: [%.4f, %.4f, %.4f]\n", phi, theta, psi);
+% fprintf("ZYX: [%.4f, %.4f, %.4f]\n", roll, pitch, yaw);
+% disp("/n");
+% 
+% disp("From Axis Angle")
+% disp("Rotational Matrix:"); disp(R2);
+% disp("From Quaternion")
+% disp("Rotational Matrix:"); disp(R3);
+% 
+% % Checking with built in matlab functions :P 
+% disp("Checks with builtin matlab functions");
+% disp("Rotation Matrix 2 Axis Angle"); disp(rotm2axang(R));
+% disp("Rotation Matrix 2 Quat"); disp(rotm2quat(R));
+% disp("Rotation Matrix 2 ZYZ"); disp(rotm2eul(R, 'ZYZ'));
+% disp("Rotation Matrix 2 ZYX"); disp(rotm2eul(R, 'XYZ'));
+% 
+% 
 
