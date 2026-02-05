@@ -2,29 +2,42 @@
 clear all; close all; clc;
 % need comments !!! and equations !! add question numbers 
 
-%% rotational matrix SO3 -> equivalent axis angle representation
+%% 1. rotational matrix SO3 -> equivalent axis angle representation
+
 function [angle, axis] = rot2axisangle(R)
 % check if so3
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end
 
-% calc angle 
-cosTheta = (trace(R) - 1) / 2;
-angle = acos(cosTheta);
-% singularity conditions and then axis calc
-if angle < 1e-6
-    error("Axis is undefined");
-elseif abs(angle - pi) < 1e-6
-    sqrtpart = 1/(sqrt(2*(1+R(1,1))));
-    axis = [(sqrtpart*(R(1,1)+1)); (sqrtpart*(R(2,1))); (sqrtpart*(R(3,1)))];
-    % Correcting signs for the pi case CHECK THIS 
-    % if R(1,2) < 0, axis(2) = -axis(2); end
-    % if R(1,3) < 0, axis(3) = -axis(3); end
-else 
-    n = (2 * sin(angle));
-    n2 = [R(3,2)-R(2,3), R(1,3) - R(3,1),R(2,1) - R(1,2)]; % do this the easier way maybe?
-    axis = n2 / n;
+if R - eye(3) < 1e-6 % CASE A: if R = I -> theta = 0
+    angle = 0;
+    disp("Axis is undefined");
+    axis = [0; 0; 0];
+elseif trace(R)+1 < 1e-6 % CASE B: if tr(R) = -1 -> theta = pi
+    angle = pi;
+    % check what diagonal element is largest to avoid division by 0
+    [~, large] = max(diag(R));
+    if large == 1
+        % w = 1/sqrt(2(1+r11) [ 1+ r11, r21, r31]
+        n = 1/(sqrt(2*(1+R(1,1))));
+        axis = n.*[R(1,1)+1; R(2,1); R(3,1)];
+    elseif large == 2
+        % w = 1/sqrt(2(1+r22) [ r12, 1+r22, r32]
+        n = 1/(sqrt(2*(1+R(2,2))));
+        axis = n.*[R(1,2); 1+ R(2,2); R(3,2)];
+    else
+        % w = 1/sqrt(2(1+r33) [ r13, r23, 1+r33]
+        n = 1/(sqrt(2*(1+R(3,3))));
+        axis = n.*[R(1,3); R(2,3); 1+ R(3,3)];
+    end
+else % CASE C: General Case 
+    % theta = acos ( 1/2 ( trR - 1) E [0, pi)
+    angle = acos(0.5*(trace(R)-1));
+    % w = 1/sintheta ( R - R')
+    axis = [R(3,2)-R(2,3);
+        R(1,3)-R(3,1);
+        R(2,1)-R(1,2)] / (2 * sin(angle));
 end
 end
 
