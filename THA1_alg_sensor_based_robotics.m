@@ -200,15 +200,17 @@ matrices = {
 };
 
 for i = 1:length(matrices)
-    fprintf('--- Testing Case: %s ---\n', test_names{i});
+    fprintf('-----------Testing Case: %s -----------\n', test_names{i});
     R = matrices{i};
     
     % 1. Test Axis-Angle
     try
+        disp("Rotational Matrix");disp(R);
         [ang, ax] = rot2axisangle(R);
-        fprintf('Axis-Angle: Angle = %.4f, Axis = [%.2f, %.2f, %.2f]\n', ang, ax);
+        fprintf('Rotational 2 Axis Angle: Angle = %.4f, Axis = [%.2f, %.2f, %.2f]\n', ang, ax);
+        disp("Builtin: Rotation Matrix 2 Axis Angle"); disp(rotm2axang(R));
         R_rec = axisangle2rot(ax, ang);
-        fprintf('Axis-Angle Recovery Error: %.4e\n', norm(R - R_rec));
+        disp("Axis Angle 2 Rotational"); disp(R_rec);
     catch ME
         fprintf('Axis-Angle Status: %s\n', ME.message);
     end
@@ -217,8 +219,9 @@ for i = 1:length(matrices)
     try
         [q0, q1, q2, q3] = rot2quat(R);
         fprintf('Quaternion: [%.4f, %.4f, %.4f, %.4f]\n', q0, q1, q2, q3);
+        disp("Builtin: Rotation Matrix 2 Quat"); disp(rotm2quat(R));
         R_rec = quat2rot(q0, q1, q2, q3);
-        fprintf('Quaternion Recovery Error: %.4e\n', norm(R - R_rec));
+        disp("Quat 2 Rotational"); disp(R_rec);
     catch ME
         fprintf('Quaternion Status: %s\n', ME.message);
     end
@@ -227,6 +230,7 @@ for i = 1:length(matrices)
     try
         [phi, theta, psi] = rot2zyz(R);
         fprintf('ZYZ Euler: [%.4f, %.4f, %.4f]\n', phi, theta, psi);
+        disp("Builtin: Rotation Matrix 2 ZYZ"); disp(rotm2eul(R, 'ZYZ'));
     catch ME
         fprintf('ZYZ Status: %s\n', ME.message);
     end
@@ -234,7 +238,8 @@ for i = 1:length(matrices)
     % 4. Test XYZ (Roll-Pitch-Yaw)
     try
         [roll, pitch, yaw] = rot2xyz(R);
-        fprintf('ZYX Euler: [%.4f, %.4f, %.4f]\n', roll, pitch, yaw);
+        fprintf('XYZ Euler: [%.4f, %.4f, %.4f]\n', roll, pitch, yaw);
+        disp("Builtin: Rotation Matrix 2 XYZ"); disp(rotm2eul(R, 'XYZ'));
     catch ME
         fprintf('ZYX Status: %s\n', ME.message);
     end
