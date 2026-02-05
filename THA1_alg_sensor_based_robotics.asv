@@ -48,8 +48,16 @@ function [q0, q1, q2, q3] = rot2quat(R)
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end
+% any function from -pi to pi no singularities
 % q0 = 1/2 sqrt( r11 + r22 + r33 + 1)
-% q1 = 1
+% q1 = 1/2 sgn(r32 - r23) sqrt( r11 - r22 - r33 + 1)
+% q2 = 1/2 sgn(r13 - r31) sqrt( r22 - r33 - r11 + 1)
+% q3 = 1/2 sgn(r21 - r12) sqrt( r33 - r11 - r22 + 1)
+
+q0 = 0.5 * sqrt(R(1,1) + R(2,2) + R(3,3) + 1);
+q1 = 0.5 * sgn(R(3,2) - R(2,3)) * sqrt(R(1,1) - R(2,2) - R(3,3) + 1);
+q2 = 0.5 * sgn(R(1,3) - R(3,1)) * sqrt(R(2,2) - R(3,3) - R(1,1) + 1);
+q3 = 0.5 * sgn(R(2,1) - R(1,2)) * sqrt(R(3,3) - R(1,1) - R(2,2) + 1);
 end
  
 
@@ -60,22 +68,17 @@ if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end 
 % add singularity
-theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
-% need to add inbetween -pi and 0 whoops; fix statements
-if abs(theta) < 1e-6 || abs(theta - pi) < 1e-6
-    phi = 0;
-    if R(3,3) > 0
-        theta = 0; % infinity solutions throw error for pi, -pi and 0 
-        psi = atan2(-R(1,2), R(1,1));
-    else 
-        theta = pi;
-        psi = atan2(R(1,2), -R(1,1));
-    end 
-else 
-    phi = atan2(R(2,3),R(1,3));
-    psi = atan2(R(3,2),-R(3,1));
-end 
-end  
+theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3)); % in the range of 0, pi
+
+% singularity sin(theta) = 0
+if abs(sin(theta)) < 1e-6 
+    if R(3,3) > 0 %theta = 0
+        phi = 0;
+        theta = 0;
+        psi = atan(-R(1,2), R(1,1));
+    else % theta == pi
+        psi = atan2(R(2,1), R(2,2));
+
 
 
 %% 1c. rotation matrix -> roll pitch yaw
