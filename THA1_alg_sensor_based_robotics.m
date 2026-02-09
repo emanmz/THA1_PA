@@ -186,7 +186,7 @@ else
 end 
 end 
 
-%% Main / Testing functions
+%% Main / Testing functions for PA Q1 & Q2
 clear all; close all; clc;
 
 % Define test cases
@@ -246,34 +246,73 @@ for i = 1:length(matrices)
     fprintf('\n');
 end
 
-% R = [0 -1 0; 1 0 0; 0 0 1]; % 90 degree rotation around Z
-% 
-% [angle, axis] = rot2axisangle(R);
-% [R2] = axisangle2rot(axis, angle);
-% [q0, q1, q2, q3] = rot2quat(R);
-% [R3] = quat2rot(q0, q1, q2, q3);
-% [phi, theta, psi] = rot2zyz(R);
-% [roll, pitch, yaw] = rot2xyz(R);
-% 
-% disp("Rotational Matrix:"); disp(R);
-% fprintf("Angle: %.4f rad\n", angle);
-% fprintf("Axis: [%.4f, %.4f, %.4f]\n", axis);
-% fprintf("Quaternion: [%.4f, %.4f, %.4f, %.4f]\n", q0, q1, q2, q3);
-% fprintf("ZYZ: [%.4f, %.4f, %.4f]\n", phi, theta, psi);
-% fprintf("ZYX: [%.4f, %.4f, %.4f]\n", roll, pitch, yaw);
-% disp("/n");
-% 
-% disp("From Axis Angle")
-% disp("Rotational Matrix:"); disp(R2);
-% disp("From Quaternion")
-% disp("Rotational Matrix:"); disp(R3);
-% 
-% % Checking with built in matlab functions :P 
-% disp("Checks with builtin matlab functions");
-% disp("Rotation Matrix 2 Axis Angle"); disp(rotm2axang(R));
-% disp("Rotation Matrix 2 Quat"); disp(rotm2quat(R));
-% disp("Rotation Matrix 2 ZYZ"); disp(rotm2eul(R, 'ZYZ'));
-% disp("Rotation Matrix 2 ZYX"); disp(rotm2eul(R, 'XYZ'));
-% 
-% 
+%% Main for PA Q3 
 
+% inputs 
+T1 = [1 0 0 2; 0 1 0 0; 0 0 1 0; 0 0 0 1];
+q = [0; 2; 0];
+s_hat = [0; 0; 1];
+h = 2; 
+
+% screw axis matrix need toconvert point, direction and pitch to se3
+S_mat = screw2Skew(q, s_hat, h);
+
+
+% configurations 
+thetas = [0, pi/4, pi/2, 3*pi/4, pi];
+labels = {'0', 'pi/4', 'pi/2', '3pi/4', 'pi'};
+
+
+% plot axis at all configs
+figure; hold on; grid on; axis equal; view(3);
+xlabel('X'); ylabel('Y'); zlabel('Z'); title('Rigid Body Motion Along Screw Axis');
+T_configs = cell(1, 5);
+for i = 1:5
+    T_step = MatrixExp6(S_mat, thetas(i)) * T1;
+    T_configs{i} = T_step;
+    plotFrame(T_step, labels{i});
+end
+
+%% 3a. Screw axis to [S] Matrix
+% https://ethz.ch/content/dam/ethz/special-interest/mavt/robotics-n-intelligent-systems/multiscaleroboticlab-dam/documents/trm/HS2018/Exercise%20Slides/03_2018-10-15_ScrewTheory.pdf
+function Smat = screw2Skew(q, s_hat, h)
+s_hat = s_hat / norm(s_hat); % norm
+
+% v = -s x q + h * s
+v  = cross(-s_hat, q) + h * s_hat;
+
+% se3 
+Oskew = [0, s_hat(3), -s_hat(2); -s_hat(3), 0, s_hat(1);-s_hat(2), s_hat(1), 0 ];
+Smat = [Oskew, v(:); 0 0 0 0];
+end 
+
+%% 3b. Matrix Exp for SE(3)
+% https://www.mathworks.com/matlabcentral/answers/1845308-how-to-do-coordinate-transformation-around-a-fixed-axis-using-robotics-toolbox-or-spatial-math-toolb
+function T = MatrixExp6(Smat, theta)
+    omega_skew = Smat(1:3, 1:3);
+    v = Smat(1:3, 4);
+    omg = [omega_skew(3,2); omega_skew(1,3); omega_skew(2,1)]; % extract vector
+    
+    if norm(omg) < 1e-6 % Pure translation
+        T = [eye(3), v * theta; 0 0 0 1];
+    else
+        R = axisangle2rot(omg, theta); % 2a function
+        % G(theta) = I*theta + (1-cos(theta))[w] + (theta-sin(theta))[w]^2
+        G = eye(3)*theta + (1-cos(theta))*omega_skew + (theta-sin(theta))*(omega_skew^2);
+        T = [R, G*v; 0 0 0 1];
+    end
+end
+
+
+
+%% helper function to plot styuff 
+function plotFrame(T, label)
+    origin = T(1:3, 4);
+    R = T(1:3, 1:3);
+    colors = ['r', 'g', 'b'];
+    axis_labels = {'x', 'y', 'z'};
+    for i = 1:3
+        quiver3(origin(1), origin(2), origin(3), R(1,i), R(2,i), R(3,i), 0.5, colors(i), 'LineWidth', 2);
+    end
+    text(origin(1), origin(2), origin(3), label);
+end
