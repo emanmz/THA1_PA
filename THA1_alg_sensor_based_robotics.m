@@ -275,14 +275,16 @@ end
 
 %% 3a. Screw axis to [S] Matrix
 % https://ethz.ch/content/dam/ethz/special-interest/mavt/robotics-n-intelligent-systems/multiscaleroboticlab-dam/documents/trm/HS2018/Exercise%20Slides/03_2018-10-15_ScrewTheory.pdf
+% W5-1 slide 6 
 function Smat = screw2Skew(q, s_hat, h)
 s_hat = s_hat / norm(s_hat); % norm
 
+% add conditions for pure translation / rotation here? 
 % v = -s x q + h * s
 v  = cross(-s_hat, q) + h * s_hat;
 
 % se3 
-Oskew = [0, s_hat(3), -s_hat(2); -s_hat(3), 0, s_hat(1);-s_hat(2), s_hat(1), 0 ];
+Oskew = [0, s_hat(3), -s_hat(2); -s_hat(3), 0, s_hat(1);s_hat(2), -s_hat(1), 0 ];
 Smat = [Oskew, v(:); 0 0 0 0];
 end 
 
@@ -293,17 +295,22 @@ function T = MatrixExp6(Smat, theta)
     v = Smat(1:3, 4);
     omg = [omega_skew(3,2); omega_skew(1,3); omega_skew(2,1)]; % extract vector
     
-    if norm(omg) < 1e-6 % Pure translation
+    if norm(omg) < 1e-6 % Pure translation w5-1 slide 10
         T = [eye(3), v * theta; 0 0 0 1];
     else
-        R = axisangle2rot(omg, theta); % 2a function
+        R = axisangle2rot(omg, theta); % 2a function this is correct from slide 10 w5 - 1 
         % G(theta) = I*theta + (1-cos(theta))[w] + (theta-sin(theta))[w]^2
         G = eye(3)*theta + (1-cos(theta))*omega_skew + (theta-sin(theta))*(omega_skew^2);
         T = [R, G*v; 0 0 0 1];
     end
 end
 
+%% 3 Matrix log w5 - 1 slide 12 
 
+function [Smat, theta] = MatrixLog6(T)
+% 2 cases 
+% if identity no rotation 
+end 
 
 %% helper function to plot styuff 
 function plotFrame(T, label)
