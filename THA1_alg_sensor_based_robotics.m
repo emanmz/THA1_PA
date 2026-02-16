@@ -162,7 +162,7 @@ function SO3 = isSO3(R)
 is3by3 = all(size(R) == [3 3]);
 if ~is3by3
     SO3 = false;
-    disp("NOT a Square 3 x 3 Rotational Matrix");
+    error("NOT a Square 3 x 3 Rotational Matrix");
     return;
 end 
 
@@ -248,7 +248,7 @@ end
 
 %% Main for PA Q3 
 
-% inputs 
+%  initial configuration of a rigid body by T, a screw axis specified by {𝑞, 𝑠̂ , ℎ} in the fixed frame {s}
 T1 = [1 0 0 2; 0 1 0 0; 0 0 1 0; 0 0 0 1];
 q = [0; 2; 0];
 s_hat = [0; 0; 1];
@@ -258,24 +258,49 @@ h = 2;
 S_mat = screw2Skew(q, s_hat, h);
 
 
-% configurations 
+% , and the total distance traveled along the screw axis 𝜃. 
 thetas = [0, pi/4, pi/2, 3*pi/4, pi];
 labels = {'0', 'pi/4', 'pi/2', '3pi/4', 'pi'};
 
 
-% plot axis at all configs
+% calculate the final configuration 𝑇1 = 𝑒[𝒮]𝜃𝑇
+% screw 𝒮 a distance 𝜃, as well as the intermediate configurations
+
 figure; hold on; grid on; axis equal; view(3);
 xlabel('X'); ylabel('Y'); zlabel('Z'); title('Rigid Body Motion Along Screw Axis');
 T_configs = cell(1, 5);
 for i = 1:5
-    T_step = MatrixExp6(S_mat, thetas(i)) * T1;
+    T_step = MatrixExp(S_mat, thetas(i)) * T1;
+    disp(labels(i));
+    disp(T_step);
     T_configs{i} = T_step;
+    % nitial, intermediate, and final configurations, the program should
+    % plot the {b} axes 
     plotFrame(T_step, labels{i});
 end
+
+% calculate the screw axis 𝒮1 and the distance
+% following 𝒮1that takes the rigid body from 𝑇1 to the origin 
+T1 = T_configs{5};
+T_inv = [T1(1:3,1:3)', -T1(1:3,1:3)'*T1(1:3,4); 0 0 0 1]; % T1 to Identity
+[S1_mat, theta1] = MatrixLog(T_inv);
+
+fprintf('Distance theta1 to origin: %.4f\n', theta1);
+disp('Screw Axis S1 matrix:'); disp(S1_mat);
+
+% plot the screw axis 𝒮1.
+% find a point q1 on the axis
+omega1 = [S1_mat(3,2); S1_mat(1,3); S1_mat(2,1)];
+v1 = S1_mat(1:3, 4);
+q1 = cross(omega1, v1); % point on the axis
+line_pts = [q1 - 5*omega1, q1 + 5*omega1];
+plot3(line_pts(1,:), line_pts(2,:), line_pts(3,:), 'k--', 'DisplayName', 'Screw Axis S1');
+legend('show');
 
 %% 3a. Screw axis to [S] Matrix
 % https://ethz.ch/content/dam/ethz/special-interest/mavt/robotics-n-intelligent-systems/multiscaleroboticlab-dam/documents/trm/HS2018/Exercise%20Slides/03_2018-10-15_ScrewTheory.pdf
 % W5-1 slide 6 
+% converts geometric screw parameters to 4 by 4 element matrix
 function Smat = screw2Skew(q, s_hat, h)
 s_hat = s_hat / norm(s_hat); % norm
 
@@ -288,9 +313,10 @@ Oskew = [0, s_hat(3), -s_hat(2); -s_hat(3), 0, s_hat(1);s_hat(2), -s_hat(1), 0 ]
 Smat = [Oskew, v(:); 0 0 0 0];
 end 
 
-%% 3b. Matrix Exp for SE(3)
+%% 3. Matrix Exp for SE(3)
 % https://www.mathworks.com/matlabcentral/answers/1845308-how-to-do-coordinate-transformation-around-a-fixed-axis-using-robotics-toolbox-or-spatial-math-toolb
-function T = MatrixExp6(Smat, theta)
+% calc transformation matrix from traveling theta along screw Smat
+function T = MatrixExp(Smat, theta)
     omega_skew = Smat(1:3, 1:3);
     v = Smat(1:3, 4);
     omg = [omega_skew(3,2); omega_skew(1,3); omega_skew(2,1)]; % extract vector
@@ -305,12 +331,24 @@ function T = MatrixExp6(Smat, theta)
     end
 end
 
-%% 3 Matrix log w5 - 1 slide 12 
-
-function [Smat, theta] = MatrixLog6(T)
-% 2 cases 
-% if identity no rotation 
-end 
+%% 3. Matrix Logarith
+% find screw that takes body T back to origin 
+function [S_mat, theta] = MatrixLog(T)
+    R = T(1:3, 1:3);
+    p = T(1:3, 4);
+    
+    if norm(R - eye(3), 'fro') < 1e-6 % pure translation
+        theta = norm(p);
+        S_mat = [zeros(3), p/theta; 0 0 0 0];
+    else
+        [theta, axis] = rot2axisangle(R); % 1a function
+        omg_skew = [0, -axis(3), axis(2); axis(3), 0, -axis(1); -axis(2), axis(1), 0];
+        % G_inv = 1/theta * I - 1/2 [omg] + (1/theta - 1/2*cot(theta/2))[omg]^2
+        G_inv = (1/theta)*eye(3) - 0.5*omg_skew + (1/theta - 0.5*cot(theta/2))*(omg_skew^2);
+        v = G_inv * p;
+        S_mat = [omg_skew, v; 0 0 0 0];
+    end
+end
 
 %% helper function to plot styuff 
 function plotFrame(T, label)
