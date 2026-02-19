@@ -204,7 +204,7 @@ end
 end 
 
 %% Main / Testing functions for PA Q1 & Q2
-
+function problem1and2()
 % Define test cases
 test_names = {'90 deg X', '90 deg Y', '90 deg Z', '180 deg Z', 'Identity'};
 matrices = {
@@ -261,20 +261,20 @@ for i = 1:length(matrices)
     end
     fprintf('\n');
 end
-
+end
 %% Main for PA Q3 
-
+function problem3()
 %  initial configuration of a rigid body by T, a screw axis specified by {𝑞, 𝑠̂ , ℎ} in the fixed frame {s}
 T1 = [1 0 0 2; 0 1 0 0; 0 0 1 0; 0 0 0 1];
 q = [0; 2; 0];
 s_hat = [0; 0; 1];
-h = 2; 
+h = 2;
 
 % screw axis matrix need toconvert point, direction and pitch to se3
 S_mat = screw2Skew(q, s_hat, h);
 
 
-% , and the total distance traveled along the screw axis 𝜃. 
+% , and the total distance traveled along the screw axis 𝜃.
 thetas = [0, pi/4, pi/2, 3*pi/4, pi];
 labels = {'0', 'pi/4', 'pi/2', '3pi/4', 'pi'};
 
@@ -291,12 +291,12 @@ for i = 1:5
     disp(T_step);
     T_configs{i} = T_step;
     % initial, intermediate, and final configurations, the program should
-    % plot the {b} axes 
+    % plot the {b} axes
     plotFrame(T_step, labels{i});
 end
 
 % calculate the screw axis 𝒮1 and the distance
-% following 𝒮1that takes the rigid body from 𝑇1 to the origin 
+% following 𝒮1that takes the rigid body from 𝑇1 to the origin
 T1 = T_configs{5};
 T_inv = [T1(1:3,1:3)', -T1(1:3,1:3)'*T1(1:3,4); 0 0 0 1]; % T1 to origin
 [S1_mat, theta1] = MatrixLog(T_inv);
@@ -312,9 +312,9 @@ q1 = cross(omega1, v1); % point on the axis
 line_pts = [q1 - 5*omega1, q1 + 5*omega1];
 plot3(line_pts(1,:), line_pts(2,:), line_pts(3,:), 'k--', 'DisplayName', 'Screw Axis S1');
 legend('show');
+end
 
 %% 3. Screw axis to [S] Matrix
-% https://ethz.ch/content/dam/ethz/special-interest/mavt/robotics-n-intelligent-systems/multiscaleroboticlab-dam/documents/trm/HS2018/Exercise%20Slides/03_2018-10-15_ScrewTheory.pdf
 % W5-1 slide 6 
 % converts geometric screw parameters to 4 by 4 element matrix
 function Smat = screw2Skew(q, s_hat, h)
@@ -324,9 +324,7 @@ if isinf(h)
     omega = [0; 0; 0];
     v = s_hat;
 else
-    % general case 
-    % add conditions for pure translation / rotation here? 
-    % w5 l 1 slide 7 ADD CONDITIONS
+
     % v = -s x q + h * s
     v  = cross(-s_hat, q) + h * s_hat;
 end 
@@ -337,7 +335,6 @@ Smat = [Oskew, v(:); 0 0 0 0];
 end 
 
 %% 3. Matrix Exp for SE(3)
-% https://www.mathworks.com/matlabcentral/answers/1845308-how-to-do-coordinate-transformation-around-a-fixed-axis-using-robotics-toolbox-or-spatial-math-toolb
 % calc transformation matrix from traveling theta along screw Smat
 function T = MatrixExp(Smat, theta)
     omega_skew = Smat(1:3, 1:3);
@@ -383,3 +380,7 @@ function plotFrame(T, label)
     end
     text(origin(1), origin(2), origin(3), label);
 end
+
+%% Calling for problem 1/2 or problem 3
+problem1and2;
+problem3();

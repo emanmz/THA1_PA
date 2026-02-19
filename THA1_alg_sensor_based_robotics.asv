@@ -91,23 +91,28 @@ end
 function [roll, pitch, yaw] = rot2xyz(R, range)
 % Make second input optional
 if nargin < 2
-    range = 'positive';
+    range = 'negative';
 end
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end 
 
-% pitch = atan2(-r31, sqrt(r32^2 + r33^2))
-pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
+if strcmpi(range, 'negative')
+    % Case 1: pitch in [-pi/2, pi/2]
+    pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
+    if abs(cos(pitch)) < 1e-6, error("Singularity!"); end
 
-if abs(cos(pitch)) < 1e-6 % When pitch is 90 or -90 deg singularity!
-    error("Singularity!");
-else 
-    % roll = atan2(r32, r33)
     roll = atan2(R(3,2), R(3,3));
-    % yaw = atan2(r21, r11)
     yaw = atan2(R(2,1), R(1,1));
-end 
+else
+    % Case 2: pitch in [pi/2, 3pi/2]
+    pitch = atan2(-R(3,1), -sqrt(R(3,2)^2 + R(3,3)^2));
+    if abs(cos(pitch)) < 1e-6, error("Singularity!"); end
+
+    % cos(pitch) is negative, signs flip
+    roll = atan2(-R(3,2), -R(3,3));
+    yaw = atan2(-R(2,1), -R(1,1));
+end
 end 
 %% 2a. axis angle -> rotation
 
@@ -141,7 +146,7 @@ function [R] = quat2rot(q0, q1, q2, q3)
 mag = sqrt(q0^2 + q1^2 + q2^2 + q3^2);
 q0 = q0/mag; q1 = q1/mag; q2 = q2/mag; q3 = q3/mag;
 
-% 2. Calculate matrix elements based on source formulas:
+% 2. Calculate matrix elements based on formulas:
 % Diagonal elements
 r11 = q0^2 + q1^2 - q2^2 - q3^2; %
 r22 = q0^2 - q1^2 + q2^2 - q3^2; %
@@ -199,7 +204,7 @@ end
 end 
 
 %% Main / Testing functions for PA Q1 & Q2
-
+function problem1and2()
 % Define test cases
 test_names = {'90 deg X', '90 deg Y', '90 deg Z', '180 deg Z', 'Identity'};
 matrices = {
@@ -256,20 +261,20 @@ for i = 1:length(matrices)
     end
     fprintf('\n');
 end
-
+end
 %% Main for PA Q3 
-
+function problem3()
 %  initial configuration of a rigid body by T, a screw axis specified by {𝑞, 𝑠̂ , ℎ} in the fixed frame {s}
 T1 = [1 0 0 2; 0 1 0 0; 0 0 1 0; 0 0 0 1];
 q = [0; 2; 0];
 s_hat = [0; 0; 1];
-h = 2; 
+h = 2;
 
 % screw axis matrix need toconvert point, direction and pitch to se3
 S_mat = screw2Skew(q, s_hat, h);
 
 
-% , and the total distance traveled along the screw axis 𝜃. 
+% , and the total distance traveled along the screw axis 𝜃.
 thetas = [0, pi/4, pi/2, 3*pi/4, pi];
 labels = {'0', 'pi/4', 'pi/2', '3pi/4', 'pi'};
 
@@ -286,12 +291,12 @@ for i = 1:5
     disp(T_step);
     T_configs{i} = T_step;
     % initial, intermediate, and final configurations, the program should
-    % plot the {b} axes 
+    % plot the {b} axes
     plotFrame(T_step, labels{i});
 end
 
 % calculate the screw axis 𝒮1 and the distance
-% following 𝒮1that takes the rigid body from 𝑇1 to the origin 
+% following 𝒮1that takes the rigid body from 𝑇1 to the origin
 T1 = T_configs{5};
 T_inv = [T1(1:3,1:3)', -T1(1:3,1:3)'*T1(1:3,4); 0 0 0 1]; % T1 to origin
 [S1_mat, theta1] = MatrixLog(T_inv);
@@ -307,9 +312,9 @@ q1 = cross(omega1, v1); % point on the axis
 line_pts = [q1 - 5*omega1, q1 + 5*omega1];
 plot3(line_pts(1,:), line_pts(2,:), line_pts(3,:), 'k--', 'DisplayName', 'Screw Axis S1');
 legend('show');
+end
 
 %% 3. Screw axis to [S] Matrix
-% https://ethz.ch/content/dam/ethz/special-interest/mavt/robotics-n-intelligent-systems/multiscaleroboticlab-dam/documents/trm/HS2018/Exercise%20Slides/03_2018-10-15_ScrewTheory.pdf
 % W5-1 slide 6 
 % converts geometric screw parameters to 4 by 4 element matrix
 function Smat = screw2Skew(q, s_hat, h)
@@ -378,3 +383,5 @@ function plotFrame(T, label)
     end
     text(origin(1), origin(2), origin(3), label);
 end
+
+%% Calling for problem 1/2 or problem 3
