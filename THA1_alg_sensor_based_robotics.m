@@ -146,7 +146,7 @@ function [R] = quat2rot(q0, q1, q2, q3)
 mag = sqrt(q0^2 + q1^2 + q2^2 + q3^2);
 q0 = q0/mag; q1 = q1/mag; q2 = q2/mag; q3 = q3/mag;
 
-% 2. Calculate matrix elements based on source formulas:
+% 2. Calculate matrix elements based on formulas:
 % Diagonal elements
 r11 = q0^2 + q1^2 - q2^2 - q3^2; %
 r22 = q0^2 - q1^2 + q2^2 - q3^2; %
