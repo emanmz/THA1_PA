@@ -88,22 +88,31 @@ end
 
 %% 1c. rotation matrix -> roll pitch yaw
 
-function [roll, pitch, yaw] = rot2xyz(R)
+function [roll, pitch, yaw] = rot2xyz(R, range)
+% Make second input optional
+if nargin < 2
+    range = 'negative';
+end
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end 
 
-% pitch = atan2(-r31, sqrt(r32^2 + r33^2))
-pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
+if strcmpi(range, 'negative')
+    % Case 1: pitch in [-pi/2, pi/2]
+    pitch = atan2(-R(3,1), sqrt(R(3,2)^2 + R(3,3)^2));
+    if abs(cos(pitch)) < 1e-6, error("Singularity!"); end
 
-if abs(cos(pitch)) < 1e-6 % When pitch is 90 or -90 deg singularity!
-    error("Singularity!");
-else 
-    % roll = atan2(r32, r33)
     roll = atan2(R(3,2), R(3,3));
-    % yaw = atan2(r21, r11)
     yaw = atan2(R(2,1), R(1,1));
-end 
+else
+    % Case 2: pitch in [pi/2, 3pi/2]
+    pitch = atan2(-R(3,1), -sqrt(R(3,2)^2 + R(3,3)^2));
+    if abs(cos(pitch)) < 1e-6, error("Singularity!"); end
+
+    % cos(pitch) is negative, signs flip
+    roll = atan2(-R(3,2), -R(3,3));
+    yaw = atan2(-R(2,1), -R(1,1));
+end
 end 
 %% 2a. axis angle -> rotation
 

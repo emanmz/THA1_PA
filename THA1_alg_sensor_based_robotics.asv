@@ -71,26 +71,28 @@ if isSO3(R) == 0
 end
 
 if strcmpi(range, 'positive')
-    theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3)); % postitive theta range
+    % Case 1: theta in [0, pi]
+    theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
     if abs(sin(theta)) < 1e-6, error("Singularity!"); end
-    
-else
-    theta = atan2(-sqrt(R(1,3)^2 + R(2,3)^2), R(3,3)); % negative theta range
-end
-
-% singularity sin(theta) = 0 or pi
-if abs(sin(theta)) < 1e-6
-    error("Singularity! Axes are parralel");
-else
-    % general case
     phi = atan2(R(2,3), R(1,3));
-    psi = atan2(R(3,2), - R(3,1));
+    psi = atan2(R(3,2), -R(3,1));
+else
+    % Case 2: theta in [-pi, 0]
+    theta = atan2(-sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
+    if abs(sin(theta)) < 1e-6, error("Singularity!"); end
+    phi = atan2(-R(2,3), -R(1,3));
+    psi = atan2(-R(3,2), R(3,1));
+end
 
 end
 
 %% 1c. rotation matrix -> roll pitch yaw
 
-function [roll, pitch, yaw] = rot2xyz(R)
+function [roll, pitch, yaw] = rot2xyz(R, range)
+% Make second input optional
+if nargin < 2
+    range = 'positive';
+end
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end 
