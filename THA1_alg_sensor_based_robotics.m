@@ -1,5 +1,6 @@
 %% THA 1 - PA 
 clear all; close all; clc;
+format default;
 
 %% 1a. rotational matrix SO3 -> equivalent axis angle representation
 
@@ -60,22 +61,29 @@ end
 
 %% 1c. rotation matrix -> ZYZ
 
-function [phi, theta, psi] = rot2zyz(R)
+function [phi, theta, psi] = rot2zyz(R, range)
+% If only 1 input is provided, default range to 'positive'
+if nargin < 2
+    range = 'positive';
+end
 if isSO3(R) == 0
     error("Not a valid SO3 matrix");
 end
 
-theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3)); % in the range of 0, pi
-
-% singularity sin(theta) = 0 or pi
-if abs(sin(theta)) < 1e-6
-    error("Singularity! Axes are parralel");
-else
-    % general case
+if strcmpi(range, 'positive')
+    % Case 1: theta in [0, pi]
+    theta = atan2(sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
+    if abs(sin(theta)) < 1e-6, error("Singularity!"); end
     phi = atan2(R(2,3), R(1,3));
-    psi = atan2(R(3,2), - R(3,1));
-
+    psi = atan2(R(3,2), -R(3,1));
+else
+    % Case 2: theta in [-pi, 0]
+    theta = atan2(-sqrt(R(1,3)^2 + R(2,3)^2), R(3,3));
+    if abs(sin(theta)) < 1e-6, error("Singularity!"); end
+    phi = atan2(-R(2,3), -R(1,3));
+    psi = atan2(-R(3,2), R(3,1));
 end
+
 end
 
 %% 1c. rotation matrix -> roll pitch yaw
@@ -187,7 +195,6 @@ end
 end 
 
 %% Main / Testing functions for PA Q1 & Q2
-clear all; close all; clc;
 
 % Define test cases
 test_names = {'90 deg X', '90 deg Y', '90 deg Z', '180 deg Z', 'Identity'};
@@ -274,7 +281,7 @@ for i = 1:5
     disp(labels(i));
     disp(T_step);
     T_configs{i} = T_step;
-    % nitial, intermediate, and final configurations, the program should
+    % initial, intermediate, and final configurations, the program should
     % plot the {b} axes 
     plotFrame(T_step, labels{i});
 end
@@ -282,7 +289,7 @@ end
 % calculate the screw axis 𝒮1 and the distance
 % following 𝒮1that takes the rigid body from 𝑇1 to the origin 
 T1 = T_configs{5};
-T_inv = [T1(1:3,1:3)', -T1(1:3,1:3)'*T1(1:3,4); 0 0 0 1]; % T1 to Identity
+T_inv = [T1(1:3,1:3)', -T1(1:3,1:3)'*T1(1:3,4); 0 0 0 1]; % T1 to origin
 [S1_mat, theta1] = MatrixLog(T_inv);
 
 fprintf('Distance theta1 to origin: %.4f\n', theta1);
@@ -297,16 +304,23 @@ line_pts = [q1 - 5*omega1, q1 + 5*omega1];
 plot3(line_pts(1,:), line_pts(2,:), line_pts(3,:), 'k--', 'DisplayName', 'Screw Axis S1');
 legend('show');
 
-%% 3a. Screw axis to [S] Matrix
+%% 3. Screw axis to [S] Matrix
 % https://ethz.ch/content/dam/ethz/special-interest/mavt/robotics-n-intelligent-systems/multiscaleroboticlab-dam/documents/trm/HS2018/Exercise%20Slides/03_2018-10-15_ScrewTheory.pdf
 % W5-1 slide 6 
 % converts geometric screw parameters to 4 by 4 element matrix
 function Smat = screw2Skew(q, s_hat, h)
-s_hat = s_hat / norm(s_hat); % norm
+s_hat = s_hat / norm(s_hat); % unit direction
 
-% add conditions for pure translation / rotation here? 
-% v = -s x q + h * s
-v  = cross(-s_hat, q) + h * s_hat;
+if isinf(h)
+    omega = [0; 0; 0];
+    v = s_hat;
+else
+    % general case 
+    % add conditions for pure translation / rotation here? 
+    % w5 l 1 slide 7 ADD CONDITIONS
+    % v = -s x q + h * s
+    v  = cross(-s_hat, q) + h * s_hat;
+end 
 
 % se3 
 Oskew = [0, s_hat(3), -s_hat(2); -s_hat(3), 0, s_hat(1);s_hat(2), -s_hat(1), 0 ];
@@ -355,7 +369,6 @@ function plotFrame(T, label)
     origin = T(1:3, 4);
     R = T(1:3, 1:3);
     colors = ['r', 'g', 'b'];
-    axis_labels = {'x', 'y', 'z'};
     for i = 1:3
         quiver3(origin(1), origin(2), origin(3), R(1,i), R(2,i), R(3,i), 0.5, colors(i), 'LineWidth', 2);
     end
