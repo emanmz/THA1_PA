@@ -270,11 +270,11 @@ q = [0; 2; 0];
 s_hat = [0; 0; 1];
 h = 2;
 
-% screw axis matrix need toconvert point, direction and pitch to se3
+% screw axis matrix need to convert point, direction and pitch to se3
 S_mat = screw2Skew(q, s_hat, h);
 
 
-% , and the total distance traveled along the screw axis 𝜃.
+% and the total distance traveled along the screw axis 𝜃.
 thetas = [0, pi/4, pi/2, 3*pi/4, pi];
 labels = {'0', 'pi/4', 'pi/2', '3pi/4', 'pi'};
 
@@ -296,7 +296,7 @@ for i = 1:5
 end
 
 % calculate the screw axis 𝒮1 and the distance
-% following 𝒮1that takes the rigid body from 𝑇1 to the origin
+% following 𝒮1 that takes the rigid body from 𝑇1 to the origin
 T1 = T_configs{5};
 T_inv = [T1(1:3,1:3)', -T1(1:3,1:3)'*T1(1:3,4); 0 0 0 1]; % T1 to origin
 [S1_mat, theta1] = MatrixLog(T_inv);
